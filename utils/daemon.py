@@ -59,9 +59,8 @@ class Daemon(object):
             if pid > 0:
                 # Exit first parent
                 sys.exit(0)
-        except OSError, e:
-            sys.stderr.write(
-                "fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
+        except OSError as err:
+            sys.stderr.write('fork #1 failed: {0}\n'.format(err))
             sys.exit(1)
 
         # Decouple from parent environment
@@ -75,19 +74,18 @@ class Daemon(object):
             if pid > 0:
                 # Exit from second parent
                 sys.exit(0)
-        except OSError, e:
-            sys.stderr.write(
-                "fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
+        except OSError as err:
+            sys.stderr.write('fork #2 failed: {0}\n'.format(err))
             sys.exit(1)
 
         if sys.platform != 'darwin':  # This block breaks on OS X
             # Redirect standard file descriptors
             sys.stdout.flush()
             sys.stderr.flush()
-            si = file(self.stdin, 'r')
-            so = file(self.stdout, 'a+')
+            si = open(self.stdin, 'r')
+            so = open(self.stdout, 'a+')
             if self.stderr:
-                se = file(self.stderr, 'a+', 0)
+                se = open(self.stderr, 'ab+', 0)
             else:
                 se = so
             os.dup2(si.fileno(), sys.stdin.fileno())
@@ -108,13 +106,14 @@ class Daemon(object):
             signal.signal(signal.SIGINT, sigtermhandler)
 
         if self.verbose >= 1:
-            print "wyProxy daemon started successfully "
+            print("wyProxy daemon started successfully ")
 
         # Write pidfile
         atexit.register(
             self.delpid)  # Make sure pid file is removed if we quit
         pid = str(os.getpid())
-        file(self.pidfile, 'w+').write("%s\n" % pid)
+        with open(self.pidfile, 'w+') as f:
+            f.write(pid + '\n')
 
     def delpid(self):
         os.remove(self.pidfile)
@@ -125,13 +124,12 @@ class Daemon(object):
         """
 
         if self.verbose >= 1:
-            print "wyproxy daemon starting..."
+            print("wyproxy daemon starting...")
 
         # Check for a pidfile to see if the daemon already runs
         try:
-            pf = file(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
+            with open(self.pidfile,'r') as pf:
+                pid = int(pf.read().strip())
         except IOError:
             pid = None
         except SystemExit:
@@ -152,7 +150,7 @@ class Daemon(object):
         """
 
         if self.verbose >= 1:
-            print "wyproxy daemon stopping..."
+            print("wyproxy daemon stopping...")
 
         # Get the pid from the pidfile
         pid = self.get_pid()
@@ -177,17 +175,17 @@ class Daemon(object):
                 i = i + 1
                 if i % 10 == 0:
                     os.kill(pid, signal.SIGHUP)
-        except OSError, err:
-            err = str(err)
-            if err.find("No such process") > 0:
+        except OSError as err:
+            e = str(err.args)
+            if e.find("No such process") > 0:
                 if os.path.exists(self.pidfile):
                     os.remove(self.pidfile)
             else:
-                print str(err)
+                print(str(err.args))
                 sys.exit(1)
 
         if self.verbose >= 1:
-            print "wyproxy daemon stopped successfully"
+            print("wyproxy daemon stopped successfully")
 
     def restart(self):
         """
@@ -198,9 +196,8 @@ class Daemon(object):
 
     def get_pid(self):
         try:
-            pf = file(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
+            with open(self.pidfile, 'r') as pf:
+                pid = int(pf.read().strip())
         except IOError:
             pid = None
         except SystemExit:
@@ -211,11 +208,11 @@ class Daemon(object):
         pid = self.get_pid()
 
         if pid is None:
-            print 'Process is stopped'
+            print('Process is stopped')
         elif os.path.exists('/proc/%d' % pid):
-            print 'Process (pid %d) is running...' % pid
+            print('Process (pid %d) is running...' % pid)
         else:
-            print 'Process (pid %d) is killed' % pid
+            print('Process (pid %d) is killed' % pid)
 
         return pid and os.path.exists('/proc/%d' % pid)
 
