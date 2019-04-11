@@ -49,7 +49,7 @@ def index():
 def settings():
     return render_template('settings.html')
 
-@app.route("/r", methods=['GET'])
+@app.route("/r", methods=['GET', 'POST'])
 def show_record():
     rid = request.args.get('id', 0, type=int)
     if not rid:
