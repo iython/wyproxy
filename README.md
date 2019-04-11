@@ -1,3 +1,28 @@
+## 开发环境  
+- Mac 10.12.4  
+- Docker version 17.12.0-ce  
+
+## 准备事项  
+- 因为 Docker 内的程序会将数据写到 Mysql 数据库，因此事先需要修改 config.py 中 mysqldb_conn 的值  
+- 用 mysqldb_conn 中的配置连接到数据库，使用 wyproxy.sql 中的语句建表  
+
+## 构建镜像  
+- docker build -t <image_tag> .  
+
+## 不带参数启动 wyproxy.py  
+- docker run -p 8080:8080 <image_id> python3 /home/xyz/wyproxy/wyproxy.py  
+
+## 安装证书（以手机为例）  
+- 手机连接无线网，将代理设置成电脑上的地址，端口设为 8080  
+- 浏览器中访问 mitm.it，选取合适的平台安装证书；HTTP 和 HTTPS 的流量都可以拦截了  
+
+## 使用 web 浏览抓取到的数据
+- Mac 上运行：python2.7 app.py
+
+------
+以下为原 README.md
+------
+
 # wyproxy
 proxying and recording HTTP/HTTPs/Socks5 proxy flow, save to MYSQL database. 
 https://github.com/ring04h/wyproxy2 (Golang high performance version)   
