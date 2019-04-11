@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # encoding: utf-8
-
 import sys
 import argparse
 import logging
 
 from utils.daemon import Daemon
-from mitmproxy import flow, proxy, controller, options
+from mitmproxy import proxy, options
 from mitmproxy.proxy.server import ProxyServer
+from mitmproxy.tools.dump import DumpMaster
 from utils.parser import ResponseParser, save_cnf, read_cnf
 from utils.handle import wyproxy_request_handle, wyproxy_response_handle
 from utils.mysql import MysqlInterface
@@ -17,39 +17,22 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
 )
 
-class WYProxy(flow.FlowMaster):
-
-    def __init__(self, opts, server, state, unsave_data):
-        super(WYProxy, self).__init__(opts, server, state)
+class AddFunc:
+    def __init__(self, unsave_data):
         self.unsave_data = unsave_data
 
-    def run(self):
-        try:
-            logging.info("wyproxy started successfully...")
-            flow.FlowMaster.run(self)
-        except KeyboardInterrupt:
-            self.shutdown()
-            logging.info("Ctrl C - stopping wyproxy server")
+    def request(self, flow):
+        wyproxy_request_handle(flow)
 
-    @controller.handler
-    def request(self, f):
-        wyproxy_request_handle(f)
-
-    @controller.handler
-    def response(self, f):
-        wyproxy_response_handle(f)
+    def response(self, flow):
+        wyproxy_response_handle(flow)
         if not self.unsave_data:
             try:
-                parser = ResponseParser(f)
+                parser = ResponseParser(flow)
                 mysqldb_io = MysqlInterface()           
                 mysqldb_io.insert_result(parser.parser_data())
             except Exception as e:
                 logging.error(str(e))
-        
-        # memory overfull bug
-        # print(len(self.state.flows))
-        # print(self.state.flow_count())
-        # self.state.clear()
 
 def start_server(proxy_port, proxy_mode, unsave_data):
     port = int(proxy_port) if proxy_port else 8080
@@ -59,17 +42,24 @@ def start_server(proxy_port, proxy_mode, unsave_data):
         mode = 'regular'
 
     opts = options.Options(
+        listen_host='0.0.0.0',
         listen_port=port,
         mode=mode,
-        cadir="./ssl/",
+        confdir='./ssl/'
         )
 
-    config = proxy.ProxyConfig(opts)
+    pconf = proxy.config.ProxyConfig(opts)
+    myaddon = AddFunc(unsave_data)
+    m = DumpMaster(opts)
+    m.server = ProxyServer(pconf)
+    m.addons.add(myaddon)
+    try:
+        logging.info("wyproxy started successfully...")
+        m.run()
+    except KeyboardInterrupt:
+        m.shutdown()
+        logging.info("Ctrl C - stopping wyproxy server")
 
-    state = flow.State()
-    server = ProxyServer(config)
-    m = WYProxy(opts, server, state, unsave_data)
-    m.run()
 
 class wyDaemon(Daemon):
 
