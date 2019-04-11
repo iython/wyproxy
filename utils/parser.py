@@ -8,25 +8,19 @@ from config import media_types, static_files, static_ext, save_content
 
 def save_cnf(args):
     """save wyproxy client options"""
-    try:
-        fd = open('.proxy.cnf', 'w')
+    with open('.proxy.cnf', 'w') as fd:
         json.dump(args.__dict__, fd)
-    finally:
-        fd.close()
 
 def read_cnf():
     """read wyproxy client options conf"""
-    try:
-        fd = open('.proxy.cnf', 'r')
+    with open('.proxy.cnf', 'r') as fd:
         return json.load(fd)
-    finally:
-        fd.close()
 
-class ResponseParser(object):
+
+class ResponseParser:
     """docstring for ResponseParser"""
 
     def __init__(self, f):
-        super(ResponseParser, self).__init__()
         self.flow = f
         self.content_type = self.get_content_type()
         self.extension = self.get_extension()
@@ -140,6 +134,6 @@ class ResponseParser(object):
     @staticmethod
     def parser_header(header):
         headers = {}
-        for key, value in header.iteritems():
+        for key, value in header.items():
             headers[key] = value
         return headers

@@ -1,2 +1,3 @@
-mitmproxy==0.18.2
+mitmproxy==4.0.4
 pymysql
+gevent
